@@ -12,70 +12,46 @@ from sklearn import metrics
 #plt.style.use('ggplot')
 
 knn = cv2.ml.KNearest_create()
-train_data = np.empty((0, 2), dtype=np.float32)  # 학습 데이터 초기화
-labels = np.empty((0, 1), dtype=np.int32)  # 라벨 초기화
 
-def start(sample_size=25):
-    global train_data, labels
-    new_train_data = np.random.randint(0, 40, size=(sample_size, 2)).astype(np.float32)
-    new_labels = classify_label(new_train_data).astype(np.int32).reshape(-1, 1)
+def start(sample_size=25) :
+    train_data = generate_data(sample_size)
+    #print("train_data :",train_data)
+    labels = classify_label(train_data)
+    power, nomal, short = binding_label(train_data, labels)
+    print("Return true if training is successful :", knn.train(train_data, cv2.ml.ROW_SAMPLE, labels))
+    return power, nomal, short
 
-    # 초기 학습 데이터 설정
-    train_data = new_train_data
-    labels = new_labels
-    print(f"🔍 Training data initialized with {sample_size} samples.")
-
-    # KNN 학습
-    knn.train(train_data, cv2.ml.ROW_SAMPLE, labels)
-    return train_data, labels
-
-def run(new_data):
-    global train_data, labels
-
-    # 새로운 데이터를 float32로 변환
-    new_data = np.array(new_data, dtype=np.float32).reshape(1, -1)
-
-    # 새로운 데이터를 학습 데이터에 추가
-    train_data = np.vstack([train_data, new_data])
-    new_label = np.array([[classify_new_data(new_data)]], dtype=np.int32)
-    labels = np.vstack([labels, new_label])
-
-    # KNN 모델 다시 학습
-    knn.train(train_data, cv2.ml.ROW_SAMPLE, labels)
-
-    # KNN 실행
-    ret, results, neighbor, dist = knn.findNearest(new_data, 5)
-    print(f"✅ New Data Classified as: {results[0][0]}")
+def run(new_data, power, nomal, short):
+    a = np.array([new_data])
+    b = a.astype(np.float32)
+    #plot_data(power, nomal, short)    
+    ret, results, neighbor, dist = knn.findNearest(b, 5) # Second parameter means 'k'
+    #print("Neighbor's label : ", neighbor)
+    print("predicted label : ", results)
+    #print("distance to neighbor : ", dist)
+    #print("what is this : ", ret)
+    #plt.plot(b[0,0], b[0,1], 'm*', markersize=14);
     return int(results[0][0])
-
-
     
 #'num_samples' is number of data points to create
 #'num_features' means the number of features at each data point (in this case, x-y conrdination values)
-def generate_data(num_samples, num_features=2):
+def generate_data(num_samples, num_features = 2) :
+    """randomly generates a number of data points"""    
     data_size = (num_samples, num_features)
-    data = np.random.randint(0, 40, size=data_size).astype(np.float32)
-
-    # 🔍 디버깅용 출력 추가
-    print(f"🔍 Generated data shape: {data.shape}, dtype: {data.dtype}")
-
-    return data.reshape(-1, 2)  # 🔹 명확히 (N, 2)로 변환
-
-
-
+    data = np.random.randint(0,40, size = data_size)
+    return data.astype(np.float32)
 
 #I determined the drowsiness-driving-risk-level based on the time which can prevent driving accident.
-def classify_label(data):
+def classify_label(train_data):
     labels = []
-    for d in data:
-        if d[1] < d[0] - 15:
+    for data in train_data :
+        if data[1] < data[0]-15 :
             labels.append(2)
-        elif d[1] >= (d[0] / 2 + 15):
+        elif data[1] >= (data[0]/2 + 15) :
             labels.append(0)
-        else:
+        else :
             labels.append(1)
-    return np.array(labels, dtype=np.int32)
-
+    return np.array(labels)
 
 def binding_label(train_data, labels) :
     power = train_data[labels==0]
@@ -114,13 +90,3 @@ def precision_score(acc_score, test_score) :
     false_zero = np.sum((acc_score != 0) * (test_score == 0))
     precision_zero = true_zero / (true_zero + false_zero)
     print("Precision for the label '0' :", precision_zero)
-
-def classify_new_data(new_data):
-    """ 실시간으로 새로운 데이터를 분류하는 함수 """
-    x, y = new_data[0]
-    if y < x - 15:
-        return 2
-    elif y >= (x / 2 + 15):
-        return 0
-    else:
-        return 1
