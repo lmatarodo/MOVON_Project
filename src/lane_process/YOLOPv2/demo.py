@@ -33,11 +33,11 @@ def make_parser():
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
     return parser
 
-def run_demo(opt):
+def run_demo(opt, shared_data):
     with torch.no_grad():
-        detect(opt)
+        detect(opt, shared_data)
 
-def detect(opt):
+def detect(opt, shared_data):
     # -------------------------------------------------
     # 1) 기본 설정 및 디렉토리
     # -------------------------------------------------
@@ -188,17 +188,26 @@ def detect(opt):
 
             # 디버깅용 출력
             #print("ROI Pixel Values:", np.unique(mask_roi))  # 고유 픽셀 값 확인
-            print("Number of White Pixels in ROI:", white_pixels)
+            #print("Number of White Pixels in ROI:", white_pixels)
 
+            prev_lane_status = shared_data['lane_departure']
+            lane_departure_detected = False
             # 이탈 여부 판단
             if white_pixels > 2373:  # 임계값 범위 내에 흰색 픽셀이 있다면
-                print("⚠️ 차량이 차선 중앙에서 이탈했습니다!")
+                lane_departure_detected = True
+                #print("⚠️ 차량이 차선 중앙에서 이탈했습니다!")
                 cv2.putText(lane_top_view, "WARNING: Lane Departure", (50, 50),
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             else:
-                print("✅ 차량이 차선 중앙에 있습니다.")
+                #print("✅ 차량이 차선 중앙에 있습니다.")
                 cv2.putText(lane_top_view, "Lane Centered", (50, 50),
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+            #if prev_lane_status != lane_departure_detected:
+                    #print("✅ [YOLO] 차선 이탈 상태 변경: {lane_departure_detected}")
+            shared_data['lane_departure'] = lane_departure_detected
+
+
 
             # 디버깅: ROI와 탑뷰 출력
             #cv2.imshow('ROI', mask_roi)
@@ -215,27 +224,27 @@ def detect(opt):
             #------------------------------------------------
             # 10) 결과 저장
             #------------------------------------------------
-            if save_img:
-                p = Path(p)  # Path 객체
-                save_path = str(save_dir / p.name)
-                if dataset.mode == 'image':
-                    cv2.imwrite(save_path, im0)
-                    print(f" The image with the result is saved in: {save_path}")
-                else:  # 'video' or 'stream'
-                    if vid_path != save_path:
-                        vid_path = save_path
-                        if isinstance(vid_writer, cv2.VideoWriter):
-                            vid_writer.release()
-                        if vid_cap:  # video
-                            fps = vid_cap.get(cv2.CAP_PROP_FPS)
-                            w, h = im0.shape[1], im0.shape[0]
-                        else:  # stream
-                            fps, w, h = 30, im0.shape[1], im0.shape[0]
-                            save_path += '.mp4'
-                        vid_writer = cv2.VideoWriter(save_path,
-                                                     cv2.VideoWriter_fourcc(*'mp4v'),
-                                                     fps, (w, h))
-                    vid_writer.write(im0)
+            # if save_img:
+            #     p = Path(p)  # Path 객체
+            #     save_path = str(save_dir / p.name)
+            #     if dataset.mode == 'image':
+            #         cv2.imwrite(save_path, im0)
+            #         print(f" The image with the result is saved in: {save_path}")
+            #     else:  # 'video' or 'stream'
+            #         if vid_path != save_path:
+            #             vid_path = save_path
+            #             if isinstance(vid_writer, cv2.VideoWriter):
+            #                 vid_writer.release()
+            #             if vid_cap:  # video
+            #                 fps = vid_cap.get(cv2.CAP_PROP_FPS)
+            #                 w, h = im0.shape[1], im0.shape[0]
+            #             else:  # stream
+            #                 fps, w, h = 30, im0.shape[1], im0.shape[0]
+            #                 save_path += '.mp4'
+            #             vid_writer = cv2.VideoWriter(save_path,
+            #                                          cv2.VideoWriter_fourcc(*'mp4v'),
+            #                                          fps, (w, h))
+            #         vid_writer.write(im0)
 
         # 바깥 for문용, 'q'로 완전 종료
         if key == ord('q'):
@@ -255,6 +264,6 @@ def detect(opt):
 
 if __name__ == '__main__':
     opt = make_parser().parse_args()
-    print(opt)
+    #print(opt)
     run_demo(opt)
     
