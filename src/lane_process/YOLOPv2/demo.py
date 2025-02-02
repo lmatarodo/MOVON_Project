@@ -6,6 +6,7 @@ from pathlib import Path
 import cv2
 import torch
 import numpy as np
+#import arduino
 
 # 필요한 함수들 임포트 (상대 경로)
 from .utils.utils import (
@@ -50,6 +51,9 @@ def detect(opt, shared_data):
     inf_time = AverageMeter()
     waste_time = AverageMeter()
     nms_time = AverageMeter()
+
+    lane_departure_start = None
+    lane_departure_duration = 0.5  # 차선 이탈로 판단할 지속 시간 (초)
 
     # -------------------------------------------------
     # 2) 모델 로드
@@ -171,7 +175,7 @@ def detect(opt, shared_data):
 
             # 차량 중심과 임계값 범위
             car_x = dst_width // 2  # 차량 중심 (탑뷰 이미지의 너비 중앙)
-            threshold_x = 50  # 가로 방향 임계값
+            threshold_x = 100  # 가로 방향 임계값
             threshold_y_top = 500  # 세로 방향 상단 제한
             threshold_y_bottom = 700  # 세로 방향 하단 제한
 
@@ -193,12 +197,26 @@ def detect(opt, shared_data):
             prev_lane_status = shared_data['lane_departure']
             lane_departure_detected = False
             # 이탈 여부 판단
-            if white_pixels > 2373:  # 임계값 범위 내에 흰색 픽셀이 있다면
-                lane_departure_detected = True
-                #print("⚠️ 차량이 차선 중앙에서 이탈했습니다!")
-                cv2.putText(lane_top_view, "WARNING: Lane Departure", (50, 50),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            if white_pixels > 2973:  # 임계값 범위 내에 흰색 픽셀이 있다면
+                if lane_departure_start is None:
+                    lane_departure_start = time.time()
+                
+                elapsed_time = time.time() - lane_departure_start
+                if elapsed_time >= lane_departure_duration:
+                    lane_departure_detected = True
+                    if prev_lane_status != lane_departure_detected:
+                        #arduino.write(b'L')  # 아두이노에 'L' 전송 → LED 켜짐
+                        print(f"🚨 차선 벗어남")
+                        print("🔔 아두이노 신호 전송 (LED 켜짐)")
+                    #print("⚠️ 차량이 차선 중앙에서 이탈했습니다!")
+                    cv2.putText(lane_top_view, "WARNING: Lane Departure", (50, 50),
+                                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             else:
+                lane_departure_start = None
+                if prev_lane_status != lane_departure_detected:
+                    print(f"🚨 차선 돌아옴")
+                    print("🔔 아두이노 신호 전송 (LED 꺼짐)")
+                    #arduino.write(b'l) # 아두이노에 'l' 전송 → LED 꺼짐
                 #print("✅ 차량이 차선 중앙에 있습니다.")
                 cv2.putText(lane_top_view, "Lane Centered", (50, 50),
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
@@ -210,10 +228,10 @@ def detect(opt, shared_data):
 
 
             # 디버깅: ROI와 탑뷰 출력
-            #cv2.imshow('ROI', mask_roi)
+            # cv2.imshow('ROI', mask_roi)
             cv2.imshow('lane_top_view_with_visuals', lane_top_view)  # 차선 마스크 탑뷰
 
-            cv2.imshow('result', im0)           # 원본
+            cv2.imshow('lane_view', im0)           # 원본
             #cv2.imshow('top_view', top_view_img)  # 원본 탑뷰
 
             key = cv2.waitKey(1) & 0xFF
