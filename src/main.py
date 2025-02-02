@@ -41,8 +41,8 @@ def main():
     try:
         manager = multiprocessing.Manager()
         shared_data = manager.dict({
-            'is_drowsy': False,       # 졸음 감지 상태
-            'lane_departure': False,  # 차선 이탈 상태
+            'is_drowsy': False,       # 졸음 감지 상태e
+            'lane_departure': False,  # 차e선 이탈 상태
             'is_closed': False,       # 눈 감김 상태
             'stop': False,            # 프로그램 종료 플래그
         })
@@ -61,7 +61,7 @@ def main():
         yolo_process.start()
         print("[MAIN] YOLO process started.")
 
-        # 3) 메인 프로세스에서 상태 모니터링
+        # 3) 메인 프로세스에서 상태 모니터링e
         while not shared_data['stop']:
             print(f"[STATUS] 눈 감김: {shared_data['is_closed']} "
               f"| 졸음 감지: {shared_data['is_drowsy']} "
