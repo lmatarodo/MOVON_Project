@@ -37,10 +37,11 @@ def run_drowsiness_detection(shared_data=None):
     # arduino = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)
     # time.sleep(2)  # 시리얼 포트 초기화 대기
 
-    EAR_THRESH = 200.0  # 눈 감김 임계값 (예: 200)
+    EAR_THRESH = 250.0  # 눈 감김 임계값 (예: 200)
     TIMER_FLAG = False  # 눈 감기 타이머 동작 중인지 여부
     start_closing = 0.0   # 눈 감기 시작 시점
     ARDUINO_SENT = False  # 5초 초과 시 아두이노 신호를 한 번만 보내기 위한 플래그
+    is_drowsy = False  # 졸음 상태 여부
 
     # 공유 데이터에 기본값 설정
     if shared_data is not None:
@@ -109,9 +110,10 @@ def run_drowsiness_detection(shared_data=None):
                 print("🔔 아두이노 신호 전송 (부저)")
 
                 # if arduino:
-                #     arduino.write(b'1')  # 아두이노에 '1' 전송 → 부저 울림
+                #     arduino.write(b'B')  # 아두이노에 '1' 전송 → 부저 울림
                 
                 ARDUINO_SENT = True
+                is_drowsy = True
                 if shared_data is not None:
                     shared_data['is_drowsy'] = True
 
@@ -119,10 +121,16 @@ def run_drowsiness_detection(shared_data=None):
             # 👇 "눈 뜸" 상태
             if shared_data is not None:
                 shared_data['is_closed'] = False
-                shared_data['is_drowsy'] = False
 
             TIMER_FLAG = False
             ARDUINO_SENT = False
+
+            if is_drowsy:
+                print("✅ 졸음 해제! 부저 OFF")
+                # if arduino:
+                #     arduino.write(b'N')  # 부저 OFF
+                is_drowsy = False
+                shared_data['is_drowsy'] = False
 
         # EAR 값 표시
         cv2.putText(frame, f"EAR: {both_ear:.2f}", (10, 30),
