@@ -26,7 +26,7 @@ def run_yolo(shared_data):
         ])
         print("[YOLO PROCESS] YOLO started.")
 
-        # YOLO 실행 (차선 이탈 감지), shared_data 함께 전달
+        # YOLO 실행 (차선 이탈 감지)
         run_demo(opt, shared_data)
 
         print("[YOLO PROCESS] YOLO finished.")
@@ -41,10 +41,11 @@ def main():
     try:
         manager = multiprocessing.Manager()
         shared_data = manager.dict({
-            'is_drowsy': False,       # 졸음 감지 상태e
-            'lane_departure': False,  # 차e선 이탈 상태
+            'is_drowsy': False,       # 졸음 감지 상태
+            'lane_departure': False,  # 차선 이탈 상태
             'is_closed': False,       # 눈 감김 상태
             'stop': False,            # 프로그램 종료 플래그
+            'ear_initialized': False, # 눈 감김 초기화 여부
         })
 
         # 1) 졸음 감지 프로세스 실행
@@ -53,6 +54,14 @@ def main():
         )
         drowsiness_process.start()
         print("[MAIN] Drowsiness detection process started.")
+
+        # 눈 감김 측정이 완료될 때까지 대기
+        while not shared_data["ear_initialized"]:
+            print("⏳ EAR 측정 중... YOLO 실행 대기")
+            time.sleep(1)
+
+        print("✅ EAR 측정 완료. YOLO 실행 시작!")
+
 
         # 2) YOLO 차선 감지 프로세스 실행
         yolo_process = multiprocessing.Process(
