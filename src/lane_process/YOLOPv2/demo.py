@@ -6,7 +6,15 @@ from pathlib import Path
 import cv2
 import torch
 import numpy as np
-#import arduino
+import serial
+
+try:
+    arduino = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
+    time.sleep(2)  # 시리얼 포트 안정화 대기
+    print("✅ Arduino 연결 성공!")
+except serial.SerialException as e:
+    print(f"⚠️ Arduino 연결 실패: {e}")
+    arduino = None  # 오류 발생 시, arduino 변수를 None으로 설정
 
 # 필요한 함수들 임포트 (상대 경로)
 from .utils.utils import (
@@ -205,7 +213,7 @@ def detect(opt, shared_data):
                 if elapsed_time >= lane_departure_duration:
                     lane_departure_detected = True
                     if prev_lane_status != lane_departure_detected:
-                        #arduino.write(b'L')  # 아두이노에 'L' 전송 → LED 켜짐
+                        arduino.write(b'L')  # 아두이노에 'L' 전송 → LED 켜짐
                         print(f"🚨 차선 벗어남")
                         print("🔔 아두이노 신호 전송 (LED 켜짐)")
                     #print("⚠️ 차량이 차선 중앙에서 이탈했습니다!")
@@ -216,7 +224,7 @@ def detect(opt, shared_data):
                 if prev_lane_status != lane_departure_detected:
                     print(f"🚨 차선 돌아옴")
                     print("🔔 아두이노 신호 전송 (LED 꺼짐)")
-                    #arduino.write(b'l) # 아두이노에 'l' 전송 → LED 꺼짐
+                    arduino.write(b'l') # 아두이노에 'l' 전송 → LED 꺼짐
                 #print("✅ 차량이 차선 중앙에 있습니다.")
                 cv2.putText(lane_top_view, "Lane Centered", (50, 50),
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
@@ -267,6 +275,9 @@ def detect(opt, shared_data):
         # 바깥 for문용, 'q'로 완전 종료
         if key == ord('q'):
             break
+
+    if arduino:
+        arduino.close()    
 
     # -------------------------------------------------
     # 11) 시간 출력
