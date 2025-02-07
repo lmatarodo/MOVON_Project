@@ -24,7 +24,7 @@
 ### 1. **운전자 졸음 감지 시스템**
 - Dlib 라이브러리를 활용하여 얼굴 랜드마크를 검출.
 - EAR 분석을 통해 눈 감김 상태를 판별하고, 5초 이상 지속될 경우 경고음 출력.
-- **프로세스 코드 위치**: `src/face_process/drowsiness-detection/drowsiness_detector.py`
+- **프로세스 코드 위치**: `src/face_process/drowsiness_detection_master/drowsiness_detector.py`
 - **참고 코드 링크**: [Drowsiness Detection GitHub Repository](https://github.com/woorimlee/drowsiness-detection)
 
 ### 2. **차선 이탈 감지 시스템**
